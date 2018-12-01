@@ -1,0 +1,29 @@
+-------------------- HOW TO USE --------------------
+
+tagger1 has two options
+
+Option1 - Train new model
+    >> tagger1 --train path_train_file path_dev_file path_map path_word_vector num_epochs model_name
+
+    the program will create a model(according to assignment demands) and train it over the train file
+    after training the model according to given parameters the program will create a pkl file for the model called
+    - model_name
+
+    for example:
+    >> tagger2 --train ./../data/pos/train ./../data/pos/dev ./../data/pos/embed_map ./../data/pos/wordVectors 50 my_model
+                                                                                    output: my_model
+
+Option1 - Predict using existing model
+    >> tagger2 --pred path_to_test_file model_name out_file_name
+    the program simply uses the file model_name to give predictions over the input file
+    the program outputs predictions file called:
+    -  out_file_name
+
+    for example:
+    >> tagger1 --pred ../data/test my_model test1.pos                               output: test1.pos
+
+
+
+--NOTE--
+# train files available in data dir
+# there is a trained model file called part1_model, it was trained over ../data/train
