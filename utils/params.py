@@ -5,5 +5,7 @@ UNKNOWN = "UUUNKKK"  # Tag for unknown word
 SEC_ORDER = 1        # significance second order words
 FST_ORDER = 1        # significance first order words
 BAR = 0.25           # bar for mapping unknown words to VOCAB words
+PREF = 3
+SUF = 3
 REMEMBER_BAR = 0.01
 DEBUG = False

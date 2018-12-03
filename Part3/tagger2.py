@@ -1,13 +1,11 @@
 import sys
-from bokeh.resources import Resources
 sys.path.insert(0, "..")
+from utils.plotter import _plot_line
 from utils.params import END
 from utils.data_loader import TrainDataLoader, TestDataLoader
 from utils.nn_activator import ModelActivator
 from utils.nn_models import NeuralNet
 import pickle
-import os
-from bokeh.plotting import show, figure, save
 
 
 def _print_usage():
@@ -31,17 +29,18 @@ def _train_new_model(args):
 
         voc_size = dl_train.vocab_size
         embed_dim = 50
-        out1 = int(dl_train.win_size * embed_dim * 0.66)
-        out2 = int(dl_train.win_size * embed_dim * 0.33)
+        out1 = 80 # int(dl_train.win_size * embed_dim * 0.66)
         out3 = dl_train.pos_dim
-        layers_dimensions = (dl_train.win_size, out1, out2, out3)
+        layers_dimensions = (dl_train.win_size, out1, out3)
         NN = NeuralNet(layers_dimensions, embedding_dim=embed_dim, vocab_size=voc_size, pre_trained=pre_traind_path)
         activator = ModelActivator(NN, dl_train, dl_dev)
         loss_vec_dev, accuracy_vec_dev, loss_vec_train, accuracy_vec_train = activator.train(num_epoch)
-        _plot_line(loss_vec_dev, "Dev - loss", "loss")
-        _plot_line(loss_vec_train, "Train - loss", "loss")
-        _plot_line(accuracy_vec_dev, "Dev - accuracy", "accuracy")
-        _plot_line(accuracy_vec_train, "Train - accuracy", "accuracy")
+        pickle.dump((loss_vec_dev, accuracy_vec_dev, loss_vec_train, accuracy_vec_train),
+                    open("res_" + model_name, "wb"))
+        _plot_line(loss_vec_dev, model_name + "_Dev - loss", "loss")
+        _plot_line(loss_vec_train, model_name + "_Train - loss", "loss")
+        _plot_line(accuracy_vec_dev, model_name + "_Dev - accuracy", "accuracy")
+        _plot_line(accuracy_vec_train, model_name + "_Train - accuracy", "accuracy")
         pickle.dump((activator, dl_train.vocabulary, dl_train.pos_map), open(model_name, "wb"))
 
 
@@ -66,25 +65,6 @@ def create_out_file(res, file_name):
             continue
         out_file.write(word + " " + pos + "\n")
     out_file.close()
-
-
-def get_x_y_axis(curve):
-    x_axis = []
-    y_axis = []
-    for x, y in curve:
-        x_axis.append(x)
-        y_axis.append(y)
-    return x_axis, y_axis
-
-
-def _plot_line(vec, header, y_axis_label):
-    if "fig" not in os.listdir("."):
-        os.mkdir("fig")
-    p = figure(plot_width=600, plot_height=250, title=header,
-               x_axis_label="epochs", y_axis_label=y_axis_label)
-    x, y = get_x_y_axis(vec)
-    p.line(x, y, line_color='green')
-    save(p, os.path.join("fig", header + ".html"), title=header, resources=Resources(mode="inline"))
 
 
 if __name__ == "__main__":

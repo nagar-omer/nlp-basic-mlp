@@ -3,7 +3,7 @@
 tagger1 has two options
 
 Option1 - Train new model
-    >> tagger1 --train path_train_file path_dev_file path_map path_word_vector num_epochs model_name
+    >> tagger2 --train path_train_file path_dev_file path_map path_word_vector num_epochs model_name
 
     the program will create a model(according to assignment demands) and train it over the train file
     after training the model according to given parameters the program will create a pkl file for the model called
@@ -20,7 +20,7 @@ Option1 - Predict using existing model
     -  out_file_name
 
     for example:
-    >> tagger1 --pred ../data/test my_model test1.pos                               output: test1.pos
+    >> tagger2 --pred ../data/test my_model test1.pos                               output: test1.pos
 
 
 

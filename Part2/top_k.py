@@ -1,43 +1,38 @@
 import numpy as np
-from math import sqrt, acos, pi
+import math
+
+words = np.loadtxt('vocab.txt', dtype=str)
+words_vectors = np.loadtxt('wordVectors.txt')
+
+word_to_vec = {word: word_vec for word, word_vec in zip(words, words_vectors)}
 
 
-class Similarity:
-    def __init__(self, vocab_file, vectors_file):
-        self._vocab_to_idx, self._idx_to_vocab = self._read_map_file(vocab_file)
-        self._vectors = np.loadtxt(vectors_file)
-
-    @staticmethod
-    def _read_map_file(map_file):
-        list_words = []
-        map_file = open(map_file, "rt")
-        for row in map_file:
-            list_words.append(row.strip())
-        word_to_idx = {word: i for i, word in enumerate(list_words)}
-        return word_to_idx, list_words
-
-    def _dist(self, u, v):
-        val = np.dot(u, v) / (sqrt(np.dot(u, u)) * sqrt(np.dot(v, v)))
-        val = 1 if val > 1 else val
-        val = -1 if val < -1 else val
-        res_temp = acos(val)
-        return abs(res_temp)
-
-    def most_similar(self, word, k):
-        word_vec = self._vectors[self._vocab_to_idx[word]]
-        best_scores = [self._dist(word_vec, word_i_vec) for word_i_vec in self._vectors]
-        best_arg = np.argsort([self._dist(word_vec, word_i_vec) for word_i_vec in self._vectors])[0:k+1]
-
-        return [(self._idx_to_vocab[idx], best_scores[idx]) for idx in best_arg]
+def dist(u, v):
+    distance = (np.dot(u, v)) / (((np.dot(u, u))**0.5) * ((np.dot(v, v))**0.5))
+    distance = 1 if distance > 1 else distance
+    distance = -1 if distance < -1 else distance
+    t = math.acos(distance)
+    return abs(t)
+    # return abs(math.acos(1 if distance > 1 else -1 if distance < -1 else distance))
 
 
-if __name__ == "__main__":
-    import os
-    sim = Similarity(vocab_file=os.path.join("..", "data", "word_embed", "embed_map"),
-                     vectors_file=os.path.join("..", "data", "word_embed", "wordVectors"))
-    print(sim.most_similar("explode", 20))
-    words = ["explode", "england", "office", "john", "dog"]
-    out = open("dafna-file", "wt")
-    for w in words:
-        out.write(str(sim.most_similar(w, 6)) + "\n")
-    e = 0
+def most_similar(word, k):
+        word1_vec = word_to_vec[word]
+
+        dist_to_word_data = [(dist(word1_vec, word2_vec), word2) for word2, word2_vec in word_to_vec.items()]
+        dist_to_word_data.sort(key=lambda x: x[0])
+
+        # first word is the given word itself so return elements 1 to k + 1
+        return dist_to_word_data[1:k + 1]
+
+
+def main():
+    print(most_similar('dog', 5))
+    print(most_similar('england', 5))
+    print(most_similar('john', 5))
+    print(most_similar('explode', 5))
+    print(most_similar('office', 5))
+
+
+if __name__ == '__main__':
+    main()

@@ -7,16 +7,15 @@ from utils.loggers import PrintLogger
 from utils.nn_models import NeuralNet
 from utils.params import END
 from sys import stdout
-DEBUG = True
 
 
 class ModelActivator:
-    def __init__(self, model: nn.Module, train_loader, dev_loader, lr=0.01, gpu=False):
+    def __init__(self, model: nn.Module, train_loader, dev_loader, lr=0.005, gpu=False):
         self._len_data = 0
         self._gpu = gpu
         # init models with current models
         self._model = model
-        self._batch_size = 64
+        self._batch_size = 256
         self._model.set_optimizer(lr=lr)
         if self._gpu:
             self._model.cuda()
@@ -45,10 +44,10 @@ class ModelActivator:
     def train(self, total_epoch, validation_rate=1):
         logger = PrintLogger("NN_train")
         logger.info("start_train")
-        loss_vec_dev = []               # return auc
-        loss_vec_train = []               # return auc
-        accuracy_vec_dev = []               # return auc
-        accuracy_vec_train = []               # return auc
+        loss_vec_dev = []
+        loss_vec_train = []
+        accuracy_vec_dev = []
+        accuracy_vec_train = []
 
         for epoch_num in range(total_epoch):
             logger.info("epoch:" + str(epoch_num))
@@ -57,6 +56,7 @@ class ModelActivator:
 
             # calc number of iteration in current epoch
             for batch_index, (data, label) in enumerate(self._train_loader):
+
                 stdout.write("\r\r\r%d" % int(100 * (batch_index + 1) / len(self._train_loader)) + "%")
                 stdout.flush()
 
@@ -67,7 +67,7 @@ class ModelActivator:
                 #     logger.info("epoch:" + str(epoch_num) + "\tx:" + str(data) +
                 #                 "\ny:" + str(label) + "\npred:" + str(torch.argmax(output)))
 
-                loss = F.nll_loss(output, label.squeeze())      # define loss node (negative log likelihood)
+                loss = F.cross_entropy(output, label.squeeze()) # define loss node (negative log likelihood)
                 loss.backward()                                 # back propagation
                 self._model.optimizer.step()                    # update weights
 
@@ -89,14 +89,19 @@ class ModelActivator:
         self._model.eval()
 
         good_preds = 0
-        all_preds = len(data_loader.dataset)
-
+        all_preds = 0
+        tag_O = data_loader.dataset.pos_to_idx('O')
         # run though all examples in validation set (from input)
         for batch_index, (data, label) in enumerate(data_loader):
-            output = self._model(data)                                          # calc output of the model
-            loss_count += F.nll_loss(output.float(), label.squeeze()).item()    # sum total loss of all iteration
+            output = self._model(data)                                               # calc output of the model
+            loss_count += F.cross_entropy(output.float(), label.squeeze()).item()    # sum total loss of all iteration
 
-            good_preds += sum([1 for _ in torch.argmax(output, dim=1) - label.squeeze() if _ == 0])
+            # good_preds += sum([1 for _ in torch.argmax(output, dim=1) - label.squeeze() if _ == 0])
+            for p, l in zip(torch.argmax(output, dim=1), label.squeeze()):
+                if l.item() != tag_O:
+                    all_preds += 1
+                    if p.item() == l.item():
+                        good_preds += 1
 
         loss = float(loss_count / len(data_loader.dataset))
         accuracy = good_preds / all_preds
@@ -106,18 +111,16 @@ class ModelActivator:
     def predict(self, data):
         test_data_loader = DataLoader(
             data,
-            batch_size=64, shuffle=True
+            batch_size=1, shuffle=False
         )
 
         results = []
         for word, vec, (is_start, is_end) in test_data_loader:
             output = torch.argmax(self._model(vec)).item()       # calc output of the model
-            results.append((word, data.idx_to_pos(output)))
+            results.append((word[0], data.idx_to_pos(output)))
             if is_end:
                 results.append((END, END))
 
-        if DEBUG:
-            print(results)
         return results
 
 
@@ -125,9 +128,9 @@ if __name__ == "__main__":
     import os
 
     dl_train = TrainDataLoader(
-        os.path.join("..", "data", "pos", "train"))  # , vocab_file=os.path.join("data", "embed_map"))
-    dl_train.vocabulary.learn_distribution(os.path.join("..", "data", "pos", "dev"), labeled=True)
-    dl_dev = TrainDataLoader(os.path.join("..", "data", "pos", "dev"), vocab=dl_train.vocabulary)
+        os.path.join("..", "data", "ner", "train"))  # , vocab_file=os.path.join("data", "embed_map"))
+    dl_train.vocabulary.learn_distribution(os.path.join("..", "data", "ner", "dev"), labeled=True)
+    dl_dev = TrainDataLoader(os.path.join("..", "data", "ner", "dev"), vocab=dl_train.vocabulary)
 
     voc_size = dl_train.vocab_size  # 100232
     embed_dim = 50
@@ -137,10 +140,10 @@ if __name__ == "__main__":
     layers_dimensions = (dl_train.win_size, out1, out2, out3)
     NN = NeuralNet(layers_dimensions, embedding_dim=embed_dim, vocab_size=voc_size)
     ma = ModelActivator(NN, dl_train, dl_dev)
-    loss_vec_dev, accuracy_vec_dev, loss_vec_train, accuracy_vec_train = ma.train(5)
+    loss_vec_dev, accuracy_vec_dev, loss_vec_train, accuracy_vec_train = ma.train(100)
 
-    dl_test = TestDataLoader(os.path.join("..", "data", "pos", "test"), dl_train.vocabulary, labeled=False)
-    dl_test.vocabulary.learn_distribution(os.path.join("..", "data", "pos", "test"), labeled=False)
+    dl_test = TestDataLoader(os.path.join("..", "data", "ner", "test"), dl_train.vocabulary, labeled=False)
+    dl_test.vocabulary.learn_distribution(os.path.join("..", "data", "ner", "test"), labeled=False)
     dl_test.load_pos_map(dl_train.pos_map)
     ma.predict(dl_test)
 
